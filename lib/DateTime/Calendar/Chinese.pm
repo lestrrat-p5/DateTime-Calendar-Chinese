@@ -16,6 +16,7 @@ use Math::Round qw(round);
 use constant GREGORIAN_CHINESE_EPOCH => DateTime->new(
     year => -2636, month => 2, day => 15, time_zone => 'UTC');
 use constant GREGORIAN_CHINESE_EPOCH_MOMENT => moment(GREGORIAN_CHINESE_EPOCH);
+use constant DEBUG => $ENV{PERL_DATETIME_CALENDAR_CHINESE_DEBUG};
 
 my %BasicValidate = (
     cycle => {
@@ -335,7 +336,7 @@ sub _calc_local_components
     my $m12 = new_moon_after($s1 + DateTime::Duration->new(days => 1) );
 
     # new moon before the next winter solstice (11th month in the current sui)
-    my $next_m11 = new_moon_before($s2 + DateTime::Duration->new(days => 1));
+    my $next_m11 = new_moon_before($s2);
 
     # new moon before now.
     my $m = new_moon_before($dt + DateTime::Duration->new(days => 1));
@@ -354,28 +355,15 @@ sub _calc_local_components
     # else you get into some real unhappy problems
     my $month;
     {
-        my $x = round(($m_moment - $m12_moment) / MEAN_SYNODIC_MONTH) -
-            (($leap_year && $self->_prior_leap_month($m12, $m)) ? 1 : 0)
-        ;
+        my $x = round(($m_moment - $m12_moment) / MEAN_SYNODIC_MONTH);
+        if ($leap_year && $self->_prior_leap_month($m12, $m)) {
+            if (DEBUG) {
+                print STDERR ">>>> leap_year && prior_leap_mont $m12 : $m\n";
+            }
+            $x--;
+        }
         $month = $x % 12 || 12;
     }
-
-# XXX - debug stuff. nice to have when you're going "huh?"
-#print STDERR 
-#    ">>>>>>\n",
-#    "   dt: ", $dt->datetime, "\n",
-#    "   s1: ", $s1->datetime, "\n",
-#    "   s2: ", $s2->datetime, "\n",
-#    "  m12: ", $m12->datetime, "\n",
-#    "n_m11: ", $next_m11->datetime, "\n",
-#    "11-12: ", round( (moment($next_m11) - $m12_moment) / MEAN_SYNODIC_MONTH), "\n",
-#    "    m: ", $m->datetime, "\n",
-#    " leap: ", $leap_year ? "yes" : "no", "\n",
-#    "m-m12: ",
-#        round(abs($m_moment - $m12_moment) / MEAN_SYNODIC_MONTH), "\n",
-#    "pleap: ", $self->_prior_leap_month($m12, $m) ? "yes" : "no", "\n",
-#    "month: ", $month, "\n",
-#    "<<<<<<\n";
 
     # XXX - tricky... we need to set month before calling elapsed_years,
     # because it will be used by that function
@@ -386,14 +374,46 @@ sub _calc_local_components
     $self->{cycle_year} = $elapsed_years % 60 || 60;
     $self->{day}        = POSIX::ceil(moment($dt) - $m_moment + 1);
 
-    $self->{leap_month} = ($leap_year &&
-        no_major_term_on($m) &&
-        !$self->_prior_leap_month($m12, new_moon_before($m))) ? 1 : 0;
+    if ($leap_year && no_major_term_on($m)) {
+        my $end = new_moon_before($m);
+        $self->{leap_month} = $self->_prior_leap_month($m12, $end) ? 0 : 1;
+    } else {
+        $self->{leap_month} = 0;
+    }
+
+    if (DEBUG) {
+        print STDERR 
+            ">>>>>>\n",
+            "   dt: ", $dt->datetime, "\n",
+            "   s1: ", $s1->datetime, "\n",
+            "   s2: ", $s2->datetime, "\n",
+            "  m12: ", $m12->datetime, "\n",
+            "n_m11: ", $next_m11->datetime, "\n",
+            "11-12: ", round( (moment($next_m11) - $m12_moment) / MEAN_SYNODIC_MONTH), "\n",
+            "    m: ", $m->datetime, "\n",
+            " leap: ", $leap_year ? "yes" : "no", "\n",
+            "m-m12: ", round(abs($m_moment - $m12_moment) / MEAN_SYNODIC_MONTH), "\n",
+            "pleap: ", $self->_prior_leap_month($m12, $m) ? "yes" : "no", "\n",
+            "month: ", $month, "\n",
+            "elapsed: ", $elapsed_years, "\n",
+            "cycle: ", $self->{cycle}, "\n",
+            "cycle_year: ", $self->{cycle_year}, "\n",
+            "<<<<<<\n";
+    }
+
 }
 
 sub elapsed_years
 {
     my $self = shift;
+    if (DEBUG) {
+        print  STDERR
+            ">>>> elapsed_years\n",
+            "moment: ", moment($self->{gregorian}), "\n",
+            "epoch:  ", GREGORIAN_CHINESE_EPOCH_MOMENT, "\n",
+            "month:  ", $self->month, "\n",
+            "<<<<\n"
+    }
     return POSIX::floor(
         1.5 - $self->month / 12 + (moment($self->{gregorian}) - GREGORIAN_CHINESE_EPOCH_MOMENT) / MEAN_TROPICAL_YEAR);
 }
@@ -401,22 +421,26 @@ sub elapsed_years
 # [1] p.250
 sub _prior_leap_month
 {
-    my $class = shift;
-    my($start, $end) = @_;
+    my($class, $start, $end) = @_;
 
-    return ($start <= $end) && (
-        no_major_term_on($end) or
-        $class->_prior_leap_month($start,
-            new_moon_before($end) ) );
-}
-
-BEGIN
-{
-    if (eval { require Memoize } && !$@) {
-        Memoize::memoize("_prior_leap_month", NORMALIZER => sub {
-            join(".", ($_[0]->utc_rd_values)[0], ($_[1]->utc_rd_values)[0]);
-        });
+    if (DEBUG) {
+        print STDERR 
+            ">>>> prior_leap_month\n",
+            "start: ", $start, "\n",
+            "end:   ", $end, "\n",
+            "<<<<\n";
     }
+
+    if ($start <= $end) {
+        if (no_major_term_on($end)) {
+            return 1;
+        }
+
+        my $new_end = new_moon_before($end - DateTime::Duration->new(days => 1));
+        return $class->_prior_leap_month( $start, $new_end );
+    }
+        
+    return ();
 }
 
 1;
