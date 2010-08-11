@@ -1,6 +1,4 @@
 use strict;
-use blib "/Users/daisuke/git/DateTime-Util-Astro";
-use blib "/Users/daisuke/git/DateTime-Event-Chinese";
 use Test::More (tests => 4);
 use_ok("DateTime::Calendar::Chinese");
 

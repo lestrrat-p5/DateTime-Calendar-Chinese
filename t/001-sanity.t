@@ -1,5 +1,3 @@
-use blib "/Users/daisuke/git/DateTime-Util-Astro";
-use blib "/Users/daisuke/git/DateTime-Event-Chinese";
 use utf8;
 use strict;
 use Test::More tests => 38;
