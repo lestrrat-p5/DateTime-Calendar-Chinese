@@ -155976,7 +155976,7 @@ foreach my $date ( sort keys %KOYOMI ) {
         die "Bad date: $date";
     }
 
-    my $dt = DateTime->new(year => int($1), month => int($2), day => int($3));
+    my $dt = DateTime->new(year => int($1), month => int($2), day => int($3), time_zone => 'Asia/Tokyo');
     my $ch = DateTime::Calendar::Chinese->from_object( object => $dt );
 
     ok $ch, "created chinese calendar for $date";
@@ -156005,11 +156005,11 @@ foreach my $date ( sort keys %KOYOMI ) {
             $ch->day,
             $ch_d
         );
-    is $ch->leap_month, $data->{leap_mon}, 
+    is !! $ch->leap_month, !! $data->{leap_mon}, 
         sprintf( "leap month matches for %s <-> %s (got %d, expect %d)",
             $date,
             $data->{kyuureki},
-            $ch->leap_month,
-            $data->{leap_month},
+            !! $ch->leap_month,
+            !! $data->{leap_month},
         );
 }
