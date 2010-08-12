@@ -54,10 +54,11 @@ while ( my $file = glob($files) ) {
                     $date,
                     $data->{kyuureki},
                     !! $ch->leap_month,
-                    !! $data->{leap_month},
+                    !! $data->{leap_mon},
                 );
         }
-    }
+        done_testing;
+    };
 }
 
 done_testing;
