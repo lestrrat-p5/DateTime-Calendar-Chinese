@@ -8,7 +8,9 @@ BEGIN {
 }
 
 use DateTime;
-use DateTime::Astro qw(MEAN_TROPICAL_YEAR MEAN_SYNODIC_MONTH moment dt_from_moment new_moon_after new_moon_before);
+use DateTime::Astro qw(MEAN_TROPICAL_YEAR MEAN_SYNODIC_MONTH moment dt_from_moment new_moon_after new_moon_before
+    solar_longitude_from_moment
+);
 use DateTime::Event::Chinese qw(chinese_new_year_before);
 use DateTime::Event::SolarTerm qw(prev_term_at no_major_term_on);
 use Params::Validate;
@@ -327,6 +329,8 @@ sub _calc_local_components
     my $self = shift;
     my $dt   = $self->{gregorian}->clone->truncate(to => 'day');
 
+    # XXX TODO: Change these calculations to use moment, not DateTime
+
     # last winter solstice
     my $s1 = prev_term_at( $dt, 270 );
     # next winter solstice
@@ -336,7 +340,7 @@ sub _calc_local_components
     my $m12 = new_moon_after($s1 + DateTime::Duration->new(days => 1) );
 
     # new moon before the next winter solstice (11th month in the current sui)
-    my $next_m11 = new_moon_before($s2);
+    my $next_m11 = new_moon_before($s2 + DateTime::Duration->new(days => 1));
 
     # new moon before now.
     my $m = new_moon_before($dt + DateTime::Duration->new(days => 1));
@@ -344,12 +348,13 @@ sub _calc_local_components
     # pre-compute and save a call to moment()
     my $m12_moment = moment($m12);
     my $m_moment   = moment($m);
+    my $m11_moment = moment($next_m11);
+
 
     # if there are 12 lunar months (29.5 days) between the last 12th month
     # and the next 11th month, then there must be a leap month some where
     my $leap_year =
-        $m12_moment != $m_moment &&
-        round((moment($next_m11) - $m12_moment) / MEAN_SYNODIC_MONTH) == 12;
+        round(($m11_moment - $m12_moment) / MEAN_SYNODIC_MONTH) == 12;
 
     # XXX - hey, there are a lot of paranthesis, but it's required or
     # else you get into some real unhappy problems
@@ -375,8 +380,8 @@ sub _calc_local_components
     $self->{day}        = POSIX::ceil(moment($dt) - $m_moment + 1);
 
     if ($leap_year && no_major_term_on($m)) {
-        my $end = new_moon_before($m);
-        $self->{leap_month} = $self->_prior_leap_month($m12, $end) ? 0 : 1;
+        my $end = new_moon_before($m - DateTime::Duration->new(days => 1));
+        $self->{leap_month} = ! $self->_prior_leap_month($m12, $end);
     } else {
         $self->{leap_month} = 0;
     }
@@ -384,19 +389,23 @@ sub _calc_local_components
     if (DEBUG) {
         print STDERR 
             ">>>>>>\n",
-            "   dt: ", $dt->datetime, "\n",
-            "   s1: ", $s1->datetime, "\n",
-            "   s2: ", $s2->datetime, "\n",
-            "  m12: ", $m12->datetime, "\n",
-            "n_m11: ", $next_m11->datetime, "\n",
-            "11-12: ", round( (moment($next_m11) - $m12_moment) / MEAN_SYNODIC_MONTH), "\n",
-            "    m: ", $m->datetime, "\n",
-            " leap: ", $leap_year ? "yes" : "no", "\n",
-            "m-m12: ", round(abs($m_moment - $m12_moment) / MEAN_SYNODIC_MONTH), "\n",
-            "pleap: ", $self->_prior_leap_month($m12, $m) ? "yes" : "no", "\n",
-            "month: ", $month, "\n",
-            "elapsed: ", $elapsed_years, "\n",
-            "cycle: ", $self->{cycle}, "\n",
+            "        dt: ", $dt->datetime, "\n",
+            "        s1: ", $s1->datetime, "\n",
+            "        s2: ", $s2->datetime, "\n",
+            "       m12: ", $m12->datetime, "\n",
+            "     n_m11: ", $next_m11->datetime, "\n",
+            "     11-12: ", round( (moment($next_m11) - $m12_moment) / MEAN_SYNODIC_MONTH), "\n",
+            "         m: ", $m->datetime, "\n",
+            " leap year: ", $leap_year ? "yes" : "no", "\n",
+            "leap month: ", $self->{leap_month} ? "yes" : "no", "\n",
+            "     m-m12: ", round(abs($m_moment - $m12_moment) / MEAN_SYNODIC_MONTH), "\n",
+            "      sl_m: ", solar_longitude_from_moment($m_moment), "\n",
+            "    sl_m12: ", solar_longitude_from_moment($m12_moment), "\n",
+
+#            "pleap: ", $self->_prior_leap_month($m12, $m) ? "yes" : "no", "\n",
+            "     month: ", $month, "\n",
+            "   elapsed: ", $elapsed_years, "\n",
+            "     cycle: ", $self->{cycle}, "\n",
             "cycle_year: ", $self->{cycle_year}, "\n",
             "<<<<<<\n";
     }
@@ -426,20 +435,26 @@ sub _prior_leap_month
     if (DEBUG) {
         print STDERR 
             ">>>> prior_leap_month\n",
+            "caller: ", join(':', (caller)[1, 2]), "\n", 
             "start: ", $start, "\n",
             "end:   ", $end, "\n",
             "<<<<\n";
     }
 
-    if ($start <= $end) {
+    while ($start <= $end) {
         if (no_major_term_on($end)) {
+            if (DEBUG) {
+                print STDERR " + prior_leap_month: there are no major terms on $end\n";
+            }
             return 1;
         }
 
-        my $new_end = new_moon_before($end - DateTime::Duration->new(days => 1));
-        return $class->_prior_leap_month( $start, $new_end );
+        $end = new_moon_before($end - DateTime::Duration->new(minutes => 30));
     }
-        
+    if (DEBUG) {
+        print " + prior_leap_month: nothing found, returning false\n";
+    }
+
     return ();
 }
 
