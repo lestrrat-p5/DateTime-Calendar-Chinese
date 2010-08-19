@@ -4,7 +4,7 @@ use strict;
 use utf8;
 use vars qw($VERSION);
 BEGIN {
-    $VERSION = '0.99000';
+    $VERSION = '0.99999';
 }
 
 use DateTime;

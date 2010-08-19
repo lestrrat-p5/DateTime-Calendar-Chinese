@@ -1,9 +1,10 @@
 Changes
 =======
 
-0.99000
+0.99999_01 19 Aug 2010
     * Migrate to using XS backend (DateTime::Astro)
     * Migrate to github
+    * Solar terms on 2020 and 2028 are known to be broken at this moment
 
 0.07 - 29 May 2007
   - Migrate to Module::Install
