@@ -214,7 +214,7 @@ sub set
 #    "grgorian: ", $self->{gregorian}->datetime,
 #    " RD: ", ($self->{gregorian}->utc_rd_values)[0],
 #    " time_zone: ", $self->{gregorian}->time_zone_short_name, "\n";
-    foreach my $ch_component qw(cycle cycle_year month leap_month day) {
+    foreach my $ch_component (qw(cycle cycle_year month leap_month day)) {
         if (exists $args{$ch_component}) {
             $self->{$ch_component} = delete $args{$ch_component};
         }
@@ -227,7 +227,7 @@ sub set
 
     # get "defaults" from the cloned dt object. we will only use these
     # values if the field wasn't specified in the argument to set()
-    foreach my $dt_component qw(hour minute second locale) {
+    foreach my $dt_component (qw(hour minute second locale)) {
         if (! exists $args{$dt_component}) {
             $args{$dt_component} = $clone->$dt_component;
         }
@@ -291,8 +291,8 @@ sub _calc_gregorian_components
     my $tmp = $prior_new_moon + DateTime::Duration->new(days => $self->day - 1);
     my %args = @_;
     my %new_args = ();
-    foreach my $component qw(
-        year month day hour minute second nanosecond locale) {
+    foreach my $component (qw(
+        year month day hour minute second nanosecond locale)) {
 
         $new_args{$component} = $tmp->$component;
     }
