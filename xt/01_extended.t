@@ -12,7 +12,13 @@ if ($ENV{PERL_DATETIME_CALENDAR_CHINESE_EXTENDED_TEST_FILES}) {
     $files = $ENV{PERL_DATETIME_CALENDAR_CHINESE_EXTENDED_TEST_FILES};
 }
 
-while ( my $file = glob($files) ) {
+# need to extract random files or otherwise this test takes too long
+my @files = glob($files);
+if ( ! $ENV{RUN_EXTENDED_TESTS} ) {
+    @files = map { $files[rand @files] } 1..5;
+}
+
+while ( my $file = shift @files ) {
     subtest $file => sub {
         my %koyomi = do $file;
         foreach my $date ( sort keys %koyomi ) {
