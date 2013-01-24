@@ -626,7 +626,7 @@ Returns true if the current month is a leap month.
 
 Returns the current day in the lunar month.
 
-=head2 elapsed_year
+=head2 elapsed_years
 
 This returns the number of years elapsed since the Chinese Epoch as defined
 by [1] (Which is 15 Feb. -2646 gregorian). Some documents use different
@@ -662,8 +662,6 @@ is generally pronounced without a tone, and is returned as "zi".
 Returns the year's Zodiac animal.
 
 =head2 day_of_week
-
-=head2 elapsed_years
 
 =head2 hour
 
