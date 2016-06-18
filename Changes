@@ -1,6 +1,11 @@
 Changes
 =======
 
+1.00 29 Nov 2011
+    * Work around 5.14 qw() deprecation
+    * Tweak test
+    * Update dependency
+
 0.99999_01 19 Aug 2010
     * Migrate to using XS backend (DateTime::Astro)
     * Migrate to github
