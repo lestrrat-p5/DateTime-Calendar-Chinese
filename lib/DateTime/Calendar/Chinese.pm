@@ -7,7 +7,7 @@ BEGIN {
     $VERSION = '0.99999';
 }
 
-use DateTime;
+use DateTime 1.04;
 use DateTime::Astro qw(MEAN_TROPICAL_YEAR MEAN_SYNODIC_MONTH moment dt_from_moment new_moon_after new_moon_before
     solar_longitude_from_moment
 );
@@ -232,6 +232,10 @@ sub set
             $args{$dt_component} = $clone->$dt_component;
         }
     }
+    if (my $locale = delete $args{locale}) {
+        $self->{gregorian}->set_locale($locale);
+    }
+
     $self->{gregorian}->set(%args);
 
 #print STDERR 

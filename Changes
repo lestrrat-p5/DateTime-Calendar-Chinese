@@ -1,6 +1,15 @@
 Changes
 =======
 
+    * Use DateTime->set_locale instead of ->set to set the locale. Using ->set
+      may actually change the local time unintentionally. Dave Rolsky. GitHub
+      PR #2.
+
+1.00 29 Nov 2011
+    * Work around 5.14 qw() deprecation
+    * Tweak test
+    * Update dependency
+
 0.99999_01 19 Aug 2010
     * Migrate to using XS backend (DateTime::Astro)
     * Migrate to github
